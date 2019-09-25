@@ -1,0 +1,85 @@
+---- Alta Inscripcio ----
+
+context:
+    Sistema::AltaInscripcio(
+        dni:    String
+        nomT:   String
+        avPreu: TPreu
+    ):Inscripcio
+
+pre:
+    Participant.allInstances() -> Exists(p | p.dni = dni) and
+    Taller.allInstances() -> Exists(t | t.nom = nomT)
+
+post:
+    Inscripcio.allInstances() -> Exists(i | i.participant.dni = dni 
+                                            and i.taller.nom = nomT
+                                            and if i.tipusIns = "InscripcioDePagament" then
+                                                    not i.pagada and i.avaluacioPreu = avPreu endif
+                                            and i.oclIsNew()
+                                            and result = i)
+
+--------------------------------------------------------------------------------------------------------
+
+---- Alta Reserva ----
+
+context:
+    Sistema::AltaReserva(
+            dataI:  Date
+            horaI:  Hora
+            codiS:  String
+            nomT:   String
+        ):Reserva
+
+pre:
+    DataHora.allInstances() -> Exists(d | d.data = dataI and d.hora = horaI) and
+    Taller.allInstances() -> Exists(t | t.nom = nomT) and
+    Sala.allInstances() -> Exists(s | s.codi = codiS)
+
+post:
+    Reserva.allInstances() -> Exists(r | r.sala.codi = codiS
+                                        and r.taller.nom = nomT
+                                        and r.datahora.data = dataI
+                                        and r.oclIsNew()
+                                        and result = r)
+
+context:
+    Sistema::ReqRecurs(
+            Reserva:    Reserva
+            codiRec:    String
+        ):ReservaAmbRecurs
+
+pre:
+    Reserva.allInstances() -> Exists(r | r = Reserva) and
+    Recurs.allInstances() -> Exists(r | r.codi = codiRec)
+
+post:
+    Reserva.allInstances() -> Exists(r | r.recurs.codi -> includes(codiRec) and
+                                        and Recurs.allInstances() -> Exists(rec | rec.reserva = r)
+                                        and r = ReservaAmbRecurs
+                                        and r.oclIsNew()
+                                        and result = r)
+
+
+--------------------------------------------------------------------------------------------------------
+
+---- Consulta Reserves Exitoses ----
+
+context:
+    Sistema::ConsultaRE( nomT: String ) :Set (tupletype (codiS: String, dataI: Date, horaI: Hora, correu: String) ) LlistaRE
+pre:
+    Taller.allInstances() -> Exists(t | t.nom = nomT) and
+    Inscripcio.allInstances() -> select(i | if i.tipusIns = "InscripcioDePagament" then
+                                                i.oclIsTypeOf(InscripcioDePagament)
+                                                and i.oclAsType(InscripcioDePagament).pagada 
+                                                and i.oclAsType(InscripcioDePagament).avaluacioPreu = Tpreu::barat endif) -> size() >= 3
+
+body:
+
+    let R : Set(Reserva) = Reserva.allInstances() -> select(r | r.taller.nom = nomT and r.valoracio -> select(v | v.puntuacio = TPuntuacio::5) -> size() > 5)
+    in R -> collect(r | Tuple {
+                                codiS = r.sala.codi,
+                                dataI = r.datahora.data,
+                                horaI = r.datahora.hora,
+                                correu = r.taller.participant.correuE
+                        })

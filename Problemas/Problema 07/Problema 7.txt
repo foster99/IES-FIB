@@ -1,0 +1,97 @@
+/*Alta Restaurant*/
+Context:
+Sistema::altaRestaurant(nom_res : string
+                        adreça_res : string)
+                        :Restaurant
+Pre:
+	Restaurant.allInstances() -> size() < 100                                   
+	Restaurant.allInstances() -> forAll() (r|r.sala -> size() <= 5)
+Post:
+Restaurant.allInstances() -> Exists (r|	r.nom = nomR		and
+										r.adreça = adreça	and
+										r.oclIsNew()		and
+										result = r)
+
+
+/*CrearSala*/
+Context:
+Sistema::afegirSala(num :int
+                    cap : int
+                    Restaurant: Restaurant)
+					:RestaurantAmbSales
+Pre:
+
+Post:
+Sala.allInstances() -> Exists (s|s.oclIsNew()        and
+                               s.numero = num       and
+                               s.capacitat = cap     and
+                               s.Restaurant = Restaurant)
+                               :RestaurantAmbSales
+
+
+/* ------------------------------------------------------------------ */
+
+/*Alta Festa Aniversari*/
+Context:
+Sistema::AltaFesta(	nom_res : 	string
+					data : 		Date      		
+					nomE : 		string
+					horaInici : time
+					edat_ho: 	natural
+					nom_ho :	string
+					):FestaAniversari
+Pre:
+	Empresa.allInstances() -> Exists (e|e.nom = nomE)    	and
+	Restaurant.allInstances() -> Exists (r|r.nom = nom_res)	and
+	Persona.allInstances() -> Exists (p|p.nom = nom_ho)
+	
+Post:
+	Aniversari.allInstances() -> Exists (a|	a.oclIsNew()                		and
+											a.edat = edat_ho			    	and
+											a.homenatjada.nom = edat_ho			and
+											a.horaInici = horaInici         	and
+											a.Empresa.nom = nomE	    		and
+											a.Data.data = data	        		and
+											a.Restaurant.nom = nom_res     		and
+											a.TipusDeFesta.nom = "Aniversari")	and
+											Assistent.allInstances() -> Exists(	ass|ass.oclIsNew()				and
+																					ass.festa = a				and
+																					ass.persona.nom = nom_ho	and
+																					ass.pagat
+																			  )									and
+											result = a)
+
+/*Afegir Organitzador*/
+Context:
+Sistema::AfegirOrganitzador (FestaAniversari : Aniversari
+							 nom_org : string
+                            ):FestaAniversariAmbAssistents
+Pre:
+	Persona.allInstances() -> Exists (p|p.nom = nom_org)
+	
+Post:
+	a.organitzador.nom -> Includes(nom_org)                        		and
+	Assistent.allInstances() -> Exists (ass|ass.oclIsNew()				and
+											ass.festa = a              	and
+											ass.persona.nom = nom_org  	and
+											ass.pagat)
+
+/* ------------------------------------------------------------------ */
+
+/*Consulta Aniversaris Estranys*/
+Context:
+Sistema::ConsultaAE(nomE : string)  :LlistaFestesAE = set (TupleType(nom_hom :string
+																	 noms_orgs : set(string)))
+
+Pre:
+	Empresa.allInstances() -> Select (e|e.nom = nomE).TipusDeFesta -> Select (tf|tf.festa -> size() > 0)
+
+Body:
+Aniversari.allInstances() -> Select (a|a.Empresa.nom = nomE        		and
+                                       a.Assistent -> size() > 30    	and
+                                       a.participant <> a.homenatjat) -> collect(a | Tuple {nom_hom = a.homenatjada.nom,
+																							noms_orgs = a.organitzador.nom})
+
+
+
+                                                                                            
